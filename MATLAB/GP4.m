@@ -111,7 +111,7 @@ new_x = ones(n,1)*700.*(1+sin(new_s));
 new_y = linspace(-2100,2000,n)';
 new_theta = ones(n,1)*pi/2;
 new_pattern = ones(n,1)*1;
-new_data = [new_x new_y new_theta new_pattern];
+new_data = [new_x new_y new_theta zeros(n,3) new_pattern];
 
 new_response = [];
 for i=1:2
