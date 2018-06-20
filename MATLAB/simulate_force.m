@@ -1,8 +1,11 @@
 function y = simulate_force(data, dt) 
 %simulate_force Returns the simulated force for x
-%   x: time, x, y, theta, vx, vy, vtheta
+%   data: time, x, y, theta, vx, vy, vtheta
+%   y: t; x; xdot f; xd'; xd_dot'
 
-X = data(:,2:end);
+
+% X = data(:,2:end);
+X = data(:,2:7);
 T = data(:,1);
 
 %%%%%%%%%%%%% Real Object Properties
@@ -83,8 +86,10 @@ function [f]=force(t, x)
 %         omegad+k(3)*sin(e(3))];
 
     k = [0.1 0.1 .5];
-    f=[.3*xdd_d*cos(e(3))+k(1)*e(1)+k(2)*omegad_des*e(2);
-        omegad_des+k(3)*sin(e(3))];
+%     f=[.3*xdd_d*cos(e(3))+k(1)*e(1)+k(2)*omegad_des*e(2);
+%         omegad_des+k(3)*sin(e(3))];
+    f=[xdd_d*cos(e(3))+k(1)*e(1);
+        omegad_des-k(2)*v*sin(e(3)*e(2))+k(3)*e(3)];
 
 end
 
