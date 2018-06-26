@@ -18,11 +18,14 @@ time_span = t0:dt:tf;
     
 x0 = X(1,1:6)'; % initial state [x;y;theta;xdot;ydot;thetadot] 
 xf = X(end,1:6)'; % final state 
+e_int = [0; 0; 0];
+f_max=[2, 2, 2];
+f_min=-f_max;
 
 %%%%%%%%%%%%% Real Object
 m = 1; % mass, kg 
 I = 1; % moment of inertia
-C = [0.1; 0.1; 0.1];
+C = [0.05; 0.05; 0.05];
 A = [0         0         0         1         0         0;
     0          0         0         0         1         0;
     0          0         0         0         0         1;   
@@ -58,24 +61,38 @@ end
 
 function [f]=force(t, x) 
     xd=interp1(T, X, t);
-    e = xd(1:6)' - x;
-    w1=.5;
-%     si1=.707;
-%     si2=.707;
-%     si3=.707;
-    si1=.7;
-    si2=.7;
-    si3=.7;
-    k1=[w1*w1 2*w1*si1];
-    k2=[w1*w1 2*w1*si2];
-    k3=[w1*w1 2*w1*si3];
+    e = xd(1:6)' - x;   
+%     w1=1.5;
+%     si1=.7;
+%     si2=.7;
+%     si3=.7;
+%     k1=[w1*w1 2*w1*si1];
+%     k2=[w1*w1 2*w1*si2];
+%     k3=[w1*w1 2*w1*si3];
+% 
+%     k1=[3 15 .00001];
+%     k2=[3 15 .00001];
+%     k3=[3 15 .00001];
+    k1=[2 7 .00001];
+    k2=[2 7 .00001];
+    k3=[2 7 .00001];
     K = [k1(1) 0     0     k1(2) 0     0;
          0     k2(1) 0     0     k2(2) 0;
          0     0     k3(1) 0     0     k3(2)];
 %     p=[-1 -2 -3 -4 -5 -6];
 %   K=place(A,B,p); 
 %     mye = eig(A-B*K)
-    f=K*e;
+    ei = [k1(3)*e_int(1);k2(3)*e_int(2);k3(3)*e_int(3)];
+    f=K*e+ei;
+    for j=1:3
+        if f(j)> f_max(j)
+            f(j) = f_max(j);
+        elseif f(j)< f_min(j)
+            f(j) = f_min(j);
+        end
+    end
+    e_int = e_int + e(1:3);
+    ee = e_int;
 end
 
 end

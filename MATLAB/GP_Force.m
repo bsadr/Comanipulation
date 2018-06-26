@@ -1,7 +1,12 @@
 %% Reading data
-% x = dlmread('chest_striaght.txt',',',1, 0);
-x = dlmread('chest_obstacle.txt',',',1, 0);
-dt = 0.01;
+file_src = 'chest_striaght.txt';
+file_pattern = 'chest_straight_patterns.txt';
+file_gprMdls = 'gprMdls_straight';
+% file_src = 'chest_obstacle.txt';
+% file_pattern = 'chest_obstacle_patterns.txt';
+% file_gprMdls = 'gprMdls_obstacle';
+x = dlmread(file_src,',',1, 0);
+dt = 0.1;
 % remove unnecesessary data data 
 a=1;
 b=[1 -1];
@@ -14,6 +19,7 @@ x = x(I,:);
 % b=[1/4 1/4 1/4 1/4];
 % y = filter(b,a,x);
 visualization = true;
+x(:,2:end) = x(:,2:end)*0.001;
 %% Visualising raw data
 if visualization
     close all
@@ -32,7 +38,7 @@ if visualization
     subplot(1,2,2)
     plot(x(:,2), x(:,3),'r-');   hold on
     plot(x(:,5), x(:,6),'b--')
-    xlim([-1500 2500]);
+    xlim([-1.500 2.500]);
     xlabel('X');
     ylabel('Y');
 end
@@ -41,13 +47,12 @@ theta = atan2(x(:,3)-x(:,6), x(:,2)-x(:,5));
 x=[x(:,1) .5*(x(:,2)+x(:,5)) .5*(x(:,3)+x(:,6)) theta];
 %% Splitting patterns
 % patterns start and end timestamps, and pattern type number
-% tp=dlmread('chest_straight_patterns.txt');
-tp=dlmread('chest_obstacle_patterns.txt');
+tp=dlmread(file_pattern);
 %  patterns data
 num_patterns = size(tp,1);
 patterns = cell(num_patterns, 3);
-% for i = 1:num_patterns
 for i = 1:num_patterns
+% for i = 1:1
     % split the data
     I = (x(:,1) > tp(i,1)) & (x(:,1) < tp(i,2));
     tmp = x(I,:);
@@ -75,19 +80,18 @@ for i = 1:num_patterns
 end
 
 %% Visualizating force simulation
-
 if visualization
     % y = t(1); x(2:4); dx(5:7); f(8:10); 
     % xref(11:13); dxref(14:16); ddxref(17:19)
     ytitles = ["$x$", "$y$", "$\theta$"];
     ytitles = [ytitles, "$\dot{x}$", "$\dot{y}$", "$\dot{\theta}$"];
     ytitles = [ytitles, "$f_x$", "$f_y$", "$f_\theta$"];
-%     for i=1:num_patterns
+%      for i=1:1
     for i=1:num_patterns
         % prompt before showing the plots
-        uiwait(msgbox(num2str(i),'Plotting','modal'));
+%         uiwait(msgbox(num2str(i),'Plotting','modal'));
         y = patterns{i,3};
-        close all
+%         close all
         figure(2)
         % plot x and dx
         for i=2:7
@@ -115,7 +119,7 @@ if visualization
         grid on
         hold on
         plot(y(:,11), y(:,12), 'b--')
-        xlim([-2500 2500]);
+        xlim([-2.500 2.500]);
         xlabel('X');
         ylabel('Y');
         legend({'simulation', 'reference'}, 'Location','southoutside')
@@ -134,10 +138,13 @@ for i = 1:num_patterns
 end
 x0 = mean(x0);
 xf = mean(xf);
-dlmwrite('config.txt',[x0; xf]);
+%dlmwrite('config.txt',[x0; xf]);
 
-msgbox('Training the GP models. It would take a while','Training','modal');
 %% fit gaussian proccess model
+f = waitbar(0,'Training the GP models. It would take a while','Name','Training GP Models',...
+    'CreateCancelBtn','setappdata(gcbf,''canceling'',1)');
+setappdata(f,'canceling',0);
+
 predictor_data = [];
 response_data = [];
 for i = 1:num_patterns
@@ -161,10 +168,13 @@ num_Mdls = size(response_data,2);
 gprMdls = cell(num_Mdls,1);
 for i=1:num_Mdls
     gprMdls{i,1} = fitrgp(predictor_data,response_data(:,i)); 
+    if getappdata(f,'canceling')
+        break
+    end
+    waitbar(i/num_Mdls,f,sprintf('Training GP Model%2d of%3d',i,num_Mdls))
 end
-% save('gprMdls_obstacle', 'gprMdls');
-save('gprMdls_straight', 'gprMdls');
-
+save(file_gprMdls, 'gprMdls');
+delete(f)
 %% 
 % Predict the response corresponding to the rows of |xi| (resubstitution
 % predictions) using the trained model. 
@@ -176,11 +186,11 @@ end
 %%
 n = 100;
 new_s = linspace(-pi, pi, n)';
-new_x = ones(n,1)*700.*(1+sin(new_s));
-new_y = linspace(-2100,2000,n)';
+new_x = ones(n,1)*.700.*(1+sin(new_s));
+new_y = linspace(-2.100,2.000,n)';
 new_theta = ones(n,1)*pi/2;
 new_pattern = ones(n,1)*1;
-new_data = [new_x new_y new_theta zeros(n,3) new_pattern];
+new_data = [new_x new_y new_theta zeros(n,3) zeros(n,3) new_pattern];
 
 new_response = [];
 for i=1:2
@@ -191,17 +201,17 @@ end
 
 %%
 if visualization
-    figure(2)
+    figure(4)
     plot(predictor_data(:,1), predictor_data(:,2), 'k--')
     hold on
     plot(test_data(:,1), test_data(:,2), 'r')
     plot(new_response(:,1), new_response(:,2), 'b');
     plot(new_data(:,1), new_data(:,2), 'r');
-    xlim([-2500 2500])
-    num_points = size(new_data,1);
-    for i=1:num_points
-        xx=[new_data(i,1) new_response(i,1)];
-        yy=[new_data(i,2) new_response(i,2)];
-        plot(xx, yy)
-    end
+    xlim([-2.500 2.500])
+%     num_points = size(new_data,1);
+%     for i=1:num_points
+%         xx=[new_data(i,1) new_response(i,1)];
+%         yy=[new_data(i,2) new_response(i,2)];
+%         plot(xx, yy)
+%     end
 end
