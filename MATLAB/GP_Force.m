@@ -1,10 +1,25 @@
 %% Reading data
-file_src = 'chest_striaght.txt';
-file_pattern = 'chest_straight_patterns.txt';
-file_gprMdls = 'gprMdls_straight';
-% file_src = 'chest_obstacle.txt';
-% file_pattern = 'chest_obstacle_patterns.txt';
-% file_gprMdls = 'gprMdls_obstacle';
+visualization = true;
+exp = ExpConditions.Straight;
+exp = ExpConditions.Obstacle;
+
+if exp == ExpConditions.Straight
+    % raw data from motion capture  
+    file_src = 'chest_striaght.txt';
+    % start and end of each motion
+    file_pattern = 'chest_straight_patterns.txt';
+    % output data (GP model)
+    file_gprMdls = 'gprMdls_straight';
+end
+
+if exp == ExpConditions.Obstacle
+    % raw data from motion capture  
+    file_src = 'chest_obstacle.txt';
+    % start and end of each motion
+    file_pattern = 'chest_obstacle_patterns.txt';
+    % output data (GP model)
+    file_gprMdls = 'gprMdls_obstacle';  
+end
 x = dlmread(file_src,',',1, 0);
 dt = 0.1;
 % remove unnecesessary data data 
@@ -18,7 +33,12 @@ x = x(I,:);
 % a=1;
 % b=[1/4 1/4 1/4 1/4];
 % y = filter(b,a,x);
-visualization = true;
+if exp == ExpConditions.Straight
+    x(:,2) = mean(x(1500:27000,2));
+    x(:,5) = mean(x(1500:27000,5));
+    x(:,8) = mean(x(1500:27000,8));
+    x(:,11) = mean(x(1500:27000,11));
+end
 x(:,2:end) = x(:,2:end)*0.001;
 %% Visualising raw data
 if visualization
@@ -115,6 +135,7 @@ if visualization
 
         % plot x-y trajectories
         figure(3)
+   
         plot(y(:,2), y(:,3))
         grid on
         hold on
@@ -138,8 +159,9 @@ for i = 1:num_patterns
 end
 x0 = mean(x0);
 xf = mean(xf);
-%dlmwrite('config.txt',[x0; xf]);
-
+if exp == ExpConditions.Straight
+    dlmwrite('config.txt',[x0(1:6); xf(1:6)]);
+end
 %% fit gaussian proccess model
 f = waitbar(0,'Training the GP models. It would take a while','Name','Training GP Models',...
     'CreateCancelBtn','setappdata(gcbf,''canceling'',1)');
@@ -149,7 +171,6 @@ predictor_data = [];
 response_data = [];
 for i = 1:num_patterns
 % for i = 1:1
-    % predictors, xi = [x y theta xdot ydot thetadot pattern_no]
     % predictors, xi = [x y theta xdot ydot thetadot f_x f_y f_z pattern_no]
     pattern_no = patterns{i,2};
     xi = patterns{i,1};
@@ -159,6 +180,7 @@ for i = 1:num_patterns
     
     % responses = [x y theta xdot ydot thetadot pattern_no] at the next time step
     % responses = [x y theta xdot ydot thetadot f_x f_y f_z pattern_no]
+    % force is not a output
     % find next values
     tmp = [xi(2:end,:); xi(end,:)];
 %     tmp = [xi(6:end,:); xi(end-4:end,:)];

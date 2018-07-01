@@ -1,8 +1,8 @@
 % load gpr models from file
 load('gprMdls_obstacle.mat')
-% load('gprMdls_straight.mat')
+load('gprMdls_straight.mat')
 mdlHuman = gprMdls;
-% load('gprMdls_obstacle.mat')
+load('gprMdls_obstacle.mat')
 mdlRobot = gprMdls;
 clear('gprMdls');
 
@@ -22,7 +22,13 @@ D = y(:,24);
 figure(1)
 plot(y(:,2), y(:,3))
 %ylim([-.5 .5])
+hold on
+plot(y(:,37), y(:,38))
+plot(y(:,43), y(:,44))
 title('x-y ', 'Interpreter', 'latex')
+%xlim([-1.500 2.500]);
+xlabel('X');
+ylabel('Y');
 pause(.5)
 
 figure(2)
