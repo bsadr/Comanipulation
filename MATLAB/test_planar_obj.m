@@ -1,10 +1,10 @@
 % load gpr models from file
-load('gprMdls_obstacle.mat')
-load('gprMdls_straight.mat')
+% load('gprMdls_obstacle.mat')
+% load('gprMdls_straight.mat')
 mdlHuman = gprMdls;
-load('gprMdls_obstacle.mat')
+% load('gprMdls_obstacle.mat')
 mdlRobot = gprMdls;
-clear('gprMdls');
+%clear('gprMdls');
 
 y = planar_obj(mdlHuman, mdlRobot);
 time_span = y(:,1);
@@ -20,6 +20,7 @@ D = y(:,24);
 % end
 
 figure(1)
+hold on
 plot(y(:,2), y(:,3))
 %ylim([-.5 .5])
 hold on
@@ -30,7 +31,27 @@ title('x-y ', 'Interpreter', 'latex')
 xlabel('X');
 ylabel('Y');
 pause(.5)
-
+%% x and xd
+figure(8)
+plt_titles = {'${x}$', '${y}$', '${\theta}$'};
+for i = 1:3
+    subplot(3, 1, i)
+    plot(y(:,1), y(:,i+1))
+    hold on
+    plot(y(:,1), y(:,i+36), 'b--')
+    title(plt_titles(i), 'Interpreter', 'latex')
+end
+%% xdot and xdot_h
+figure(9)
+plt_titles = {'$\dot{x}$', '$\dot{y}$', '$\dot{\theta}$'};
+for i = 1:3
+    subplot(3, 1, i)
+    plot(y(:,1), y(:,i+4))
+    hold on
+    plot(y(:,1), y(:,i+39), 'b--')
+    title(plt_titles(i), 'Interpreter', 'latex')
+end
+%%
 figure(2)
 plt_titles = {'$f_{e,x}$', '$f_{e,y}$', '$f_{e,\theta}$'};
 for i = 11:13

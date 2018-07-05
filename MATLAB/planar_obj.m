@@ -104,7 +104,8 @@ function xdot=rhs(t,x)
     D = 1-fi(2);
     P_R = performance(pr);
 %     y = [y, [t; x; f; f_e; f_r; f_h; f_int; P_R; D; mode; pr; fi; f_imp; f_ext; xhd]];
-    y = [y, [t; x; fhd; fhd; fhd; fhd; f_int; P_R; D; mode; pr; fi; f_imp; f_ext; xhd; xrd]];
+    y = [y, [t; x; f; f_e; f_r; f_h; f_int; P_R; D; mode; pr; fi; f_imp; f_ext; xhd; xrd]];
+%     y = [y, [t; x; fhd; fhd; fhd; fhd; f_int; P_R; D; mode; pr; fi; f_imp; f_ext; xhd; xrd]];
 %     disp([t, x' P_R f_h'])
      xdot=A*x+B*f;
 %    xdot=A*x+B*fhd;
@@ -114,9 +115,9 @@ end
 function [f, f_imp, f_ext, f_e, f_r, fh, f_int, mode]=force_imp(x, xhd, xrd, t) 
     %%%%%%% estimate human trajectory and find robot force
     er = xrd - x;
-    k1=[.5  0  0 .7];
-    k2=[.5  0  0 .7];
-    k3=[.5 0  0  .7];
+    k1=[2  0  0 7];
+    k2=[2  0  0 7];
+    k3=[2 0  0  7];
     Kr=[k1 0  0;
         0  k2 0;
         0  0  k3];
@@ -124,9 +125,9 @@ function [f, f_imp, f_ext, f_e, f_r, fh, f_int, mode]=force_imp(x, xhd, xrd, t)
     
     %%%%%%% simulate human desired trajectory and find human force
     eh=xhd-x;
-    k4=[.5 0  0  .7];
-    k5=[.5 0  0  .7];
-    k6=[.5 0  0  .7];
+    k4=[2 0  0  7];
+    k5=[2 0  0  7];
+    k6=[2 0  0  7];
     Kx=[k4 0  0;
         0  k5 0;
         0  0  k6];

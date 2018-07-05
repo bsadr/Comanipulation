@@ -1,6 +1,7 @@
 %% Reading data
 visualization = true;
-exp = ExpConditions.Straight;
+% visualization = false;
+% exp = ExpConditions.Straight;
 exp = ExpConditions.Obstacle;
 
 if exp == ExpConditions.Straight
@@ -40,31 +41,25 @@ if exp == ExpConditions.Straight
     x(:,11) = mean(x(1500:27000,11));
 end
 x(:,2:end) = x(:,2:end)*0.001;
+% calculateing object position and angle 
+theta = atan2(x(:,3)-x(:,6), x(:,2)-x(:,5));
+x=[x(:,1) .5*(x(:,2)+x(:,5)) .5*(x(:,3)+x(:,6)) theta];
 %% Visualising raw data
 if visualization
     close all
     figure(1)
-    theta = atan2d(x(:,3)-x(:,6), x(:,2)-x(:,5));
-    ytitles = ["x", "y", "z", "\theta"];
+    ytitles = ["x", "y", "\theta"];
     for i=2:4
-        subplot(4,2,2*i-3)
-        plot(x(:,1), x(:,i),'r-');      hold on 
-        plot(x(:,1), x(:,i+3),'b--');   grid on
+        subplot(3,2,2*i-3)
+        plot(x(:,1), x(:,i));      hold on 
         ylabel(ytitles(i-1));
     end
-    subplot(4,2,7)
-    plot(x(:,1), theta,'r-');    grid on
-    ylabel(ytitles(4));
     subplot(1,2,2)
     plot(x(:,2), x(:,3),'r-');   hold on
-    plot(x(:,5), x(:,6),'b--')
     xlim([-1.500 2.500]);
     xlabel('X');
     ylabel('Y');
 end
-%% calculateing object position and angle 
-theta = atan2(x(:,3)-x(:,6), x(:,2)-x(:,5));
-x=[x(:,1) .5*(x(:,2)+x(:,5)) .5*(x(:,3)+x(:,6)) theta];
 %% Splitting patterns
 % patterns start and end timestamps, and pattern type number
 tp=dlmread(file_pattern);
@@ -77,7 +72,14 @@ for i = 1:num_patterns
     I = (x(:,1) > tp(i,1)) & (x(:,1) < tp(i,2));
     tmp = x(I,:);
     tmp(:,1) = tmp(:,1) - tmp(1,1); 
+    pattern_no = tp(i,3); 
     
+    if pattern_no == 1 || pattern_no == 4
+            J = (tmp(:,2) < tmp(1,2));
+    elseif pattern_no ==  2 || pattern_no == 3
+            J = (tmp(:,2) > tmp(1,2));
+    end
+    tmp(J,2) = tmp(2,2);
     % apply kalman filter
     tmp = kalman3d(tmp);
     v_tmp = [tmp(:,1) tmp(:,5:7)];
@@ -95,7 +97,7 @@ for i = 1:num_patterns
 %     xf = tmp(:,2:7); % xf = [x and xdot]
 %     xf = xq(:,1:6); % xf = [x and xdot]
     patterns{i,1} = xf(:,2:10);
-    patterns{i,2} = tp(i,3); 
+    patterns{i,2} = pattern_no;
     patterns{i,3} = xf;     
 end
 
@@ -106,7 +108,7 @@ if visualization
     ytitles = ["$x$", "$y$", "$\theta$"];
     ytitles = [ytitles, "$\dot{x}$", "$\dot{y}$", "$\dot{\theta}$"];
     ytitles = [ytitles, "$f_x$", "$f_y$", "$f_\theta$"];
-%      for i=1:1
+%     for i=1:1
     for i=1:num_patterns
         % prompt before showing the plots
 %         uiwait(msgbox(num2str(i),'Plotting','modal'));
@@ -159,7 +161,7 @@ for i = 1:num_patterns
 end
 x0 = mean(x0);
 xf = mean(xf);
-if exp == ExpConditions.Straight
+if exp == ExpConditions.Obstacle
     dlmwrite('config.txt',[x0(1:6); xf(1:6)]);
 end
 %% fit gaussian proccess model
@@ -173,18 +175,21 @@ for i = 1:num_patterns
 % for i = 1:1
     % predictors, xi = [x y theta xdot ydot thetadot f_x f_y f_z pattern_no]
     pattern_no = patterns{i,2};
-    xi = patterns{i,1};
-%     xi = [xi(:,1:3)  ones(size(xi,1),1)*pattern_no];
-    xi = [xi  ones(size(xi,1),1)*pattern_no];
-    predictor_data = [predictor_data; xi];
-    
-    % responses = [x y theta xdot ydot thetadot pattern_no] at the next time step
-    % responses = [x y theta xdot ydot thetadot f_x f_y f_z pattern_no]
-    % force is not a output
-    % find next values
-    tmp = [xi(2:end,:); xi(end,:)];
-%     tmp = [xi(6:end,:); xi(end-4:end,:)];
-    response_data = [response_data; tmp];
+    if pattern_no == 1
+        xi = patterns{i,1};
+    %     xi = [xi(:,1:3)  ones(size(xi,1),1)*pattern_no];
+        xi = [xi  ones(size(xi,1),1)*pattern_no];
+        predictor_data = [predictor_data; xi];
+
+        % responses = [x y theta xdot ydot thetadot pattern_no] at the next time step
+        % responses = [x y theta xdot ydot thetadot f_x f_y f_z pattern_no]
+        % force is not a output
+        % find next values
+        tmp = [xi(2:end,:); xi(end,:)];
+%         tmp = [xi(6:end,:); xi(end-4:end,:)];
+%         tmp = [xi(3:end,:); xi(end-1:end,:)];
+        response_data = [response_data; tmp];
+    end
 end
 num_Mdls = size(response_data,2);
 gprMdls = cell(num_Mdls,1);
@@ -206,34 +211,20 @@ for i=1:2
     test_data = [test_data tmp];
 end
 %%
-n = 100;
-new_s = linspace(-pi, pi, n)';
-new_x = ones(n,1)*.700.*(1+sin(new_s));
-new_y = linspace(-2.100,2.000,n)';
-new_theta = ones(n,1)*pi/2;
-new_pattern = ones(n,1)*1;
-new_data = [new_x new_y new_theta zeros(n,3) zeros(n,3) new_pattern];
-
-new_response = [];
-for i=1:2
-    ypred = predict(gprMdls{i,1}, new_data);
-    new_response = [new_response ypred];
+test_pattern = 1;
+zk=[x0 test_pattern];
+z = [zk];
+zk1 = zk;
+for j = 1:200
+    for i=1:num_Mdls
+        zk1(i) = predict(gprMdls{i,1}, zk);
+    end
+    z = [z; zk1];
+    zk = zk1;
 end
 
-
-%%
 if visualization
-    figure(4)
-    plot(predictor_data(:,1), predictor_data(:,2), 'k--')
-    hold on
-    plot(test_data(:,1), test_data(:,2), 'r')
-    plot(new_response(:,1), new_response(:,2), 'b');
-    plot(new_data(:,1), new_data(:,2), 'r');
+    figure(3)
+    plot(z(:,1), z(:,2))
     xlim([-2.500 2.500])
-%     num_points = size(new_data,1);
-%     for i=1:num_points
-%         xx=[new_data(i,1) new_response(i,1)];
-%         yy=[new_data(i,2) new_response(i,2)];
-%         plot(xx, yy)
-%     end
 end
