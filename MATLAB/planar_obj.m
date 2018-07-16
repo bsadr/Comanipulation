@@ -4,8 +4,9 @@ function y = planar_obj(mdlHuman, mdlRobot)
 % obj_width = .20;    % width of the object
 % obj_points = [[obj_len/2; 0] [-obj_len/2; 0]]; % human and robot grasp points
 t0 = 0; 
-tf   = 30;  %final time in seconds. 
+tf   = 9;  %final time in seconds. 
 dt = 0.005;
+dt = 0.1;
 time_lines=[t0,tf/2,tf];
 time_span_sub = t0:dt:tf/2;
 time_span = t0:dt:tf;
@@ -64,7 +65,7 @@ tau = 20;
 prs = ones(1, tau);
 %%%%%%%%%%%%%%%%%%%%%%%%%% Solve for x and h (y=[x(motion);h(generalized force)])
 y = [];
-[t,x]=ode23(@rhs,time_span,x0); 
+[t,x]=ode45(@rhs,time_span,x0); 
 [~,idu] = unique(y(1,:));
 unique_y = y(:,idu);
 tmp = t';
@@ -84,7 +85,7 @@ clear tmp unique_y idu
 % end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% Aux. Functions
-function xdot=rhs(t,x) 
+function xdot=rhs(t,x)
     if x(3)>pi
         x(3)=x(3)-pi;
     elseif x(3)<-pi
@@ -107,9 +108,9 @@ function xdot=rhs(t,x)
     y = [y, [t; x; f; f_e; f_r; f_h; f_int; P_R; D; mode; pr; fi; f_imp; f_ext; xhd; xrd]];
 %     y = [y, [t; x; fhd; fhd; fhd; fhd; f_int; P_R; D; mode; pr; fi; f_imp; f_ext; xhd; xrd]];
 %     disp([t, x' P_R f_h'])
+    f_h_pre = f;
      xdot=A*x+B*f;
 %    xdot=A*x+B*fhd;
-    f_h_pre = f;
 end
 
 function [f, f_imp, f_ext, f_e, f_r, fh, f_int, mode]=force_imp(x, xhd, xrd, t) 
@@ -121,7 +122,7 @@ function [f, f_imp, f_ext, f_e, f_r, fh, f_int, mode]=force_imp(x, xhd, xrd, t)
     Kr=[k1 0  0;
         0  k2 0;
         0  0  k3];
-    fr=.9*Kr*er;
+    fr=.75*Kr*er;
     
     %%%%%%% simulate human desired trajectory and find human force
     eh=xhd-x;
@@ -131,7 +132,7 @@ function [f, f_imp, f_ext, f_e, f_r, fh, f_int, mode]=force_imp(x, xhd, xrd, t)
     Kx=[k4 0  0;
         0  k5 0;
         0  0  k6];
-    fh=.9*Kx*eh;
+    fh=.75*Kx*eh;
     
     seq=find(switch_sequence>=t);
     current_mode = switch_mode(seq(1));
@@ -154,7 +155,7 @@ function [f, f_imp, f_ext, f_e, f_r, fh, f_int, mode]=force_imp(x, xhd, xrd, t)
 end
 
 function f=force_obj(x, f_imp, f_ext)
-    xdes = [x(2); x(4); x(6)];
+    xdes = [x(4); x(5); x(6)];
     f = Co - f_ext + MoMv1 * (f_imp+f_ext-Dv.*xdes);
     if norm(f)>20
 %         disp(f);
@@ -162,7 +163,7 @@ function f=force_obj(x, f_imp, f_ext)
 end
 
 function f=force_obj_reactive(x, f_imp, f_ext)
-    xdes = [x(2); x(4); x(6)];
+    xdes = [x(4); x(5); x(6)];
     f = Co - f_ext + MoMv1 * (f_imp+f_ext-Dv.*xdes);
     if norm(f)>20
 %         disp(f);
@@ -198,6 +199,7 @@ function [pr, fi] = factors(f_e, f_int, f_h, f_r, x_hat, x, sig)
     elseif fhfr ==0
         f2 = 1;
     else
+        %%%%%%%%%%%%%%%%% check here
         f2 = (rand)/10;
     end
     if f2<.5

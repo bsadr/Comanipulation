@@ -1,12 +1,13 @@
 %% Reading data
+clear all
 visualization = true;
 % visualization = false;
-% exp = ExpConditions.Straight;
+%exp = ExpConditions.Straight;
 exp = ExpConditions.Obstacle;
 
 if exp == ExpConditions.Straight
     % raw data from motion capture  
-    file_src = 'chest_striaght.txt';
+    file_src = 'chest_striaght_filtered.txt';
     % start and end of each motion
     file_pattern = 'chest_straight_patterns.txt';
     % output data (GP model)
@@ -15,7 +16,7 @@ end
 
 if exp == ExpConditions.Obstacle
     % raw data from motion capture  
-    file_src = 'chest_obstacle.txt';
+    file_src = 'chest_obstacle_filtered.txt';
     % start and end of each motion
     file_pattern = 'chest_obstacle_patterns.txt';
     % output data (GP model)
@@ -71,16 +72,25 @@ for i = 1:num_patterns
     % split the data
     I = (x(:,1) > tp(i,1)) & (x(:,1) < tp(i,2));
     tmp = x(I,:);
-    tmp(:,1) = tmp(:,1) - tmp(1,1); 
-    pattern_no = tp(i,3); 
-    
-    if pattern_no == 1 || pattern_no == 4
+    % transfer data points to the origin
+    tmp(:,1:3) = tmp(:,1:3) - tmp(1,1:3); 
+    pattern_no = tp(i,3);    
+
+    % transfer outbounds data points in x- directions to the origin
+    if pattern_no == 1 || pattern_no == 3
             J = (tmp(:,2) < tmp(1,2));
-    elseif pattern_no ==  2 || pattern_no == 3
+            tmp(J,2) = tmp(2,2);
+    elseif pattern_no ==  2 || pattern_no == 4
             J = (tmp(:,2) > tmp(1,2));
+%            tmp(J,2) = tmp(2,2);
     end
-    tmp(J,2) = tmp(2,2);
-    % apply kalman filter
+    % add goal points to the end of data
+    for j = 1:1
+        tmp = [tmp; tmp(end,:)];
+        tmp(end,1:2) = [tmp(end,1)+dt tmp(1,2)];
+    end
+            
+    % apply kalman filte
     tmp = kalman3d(tmp);
     v_tmp = [tmp(:,1) tmp(:,5:7)];
     v_tmp = kalman3d(v_tmp);
@@ -91,7 +101,8 @@ for i = 1:num_patterns
     xq = interp1(tmp(:,1), tmp(:,2:end), timespan);
     xq(end,4:end)=0.*xq(end,4:end);
     % simulate force    
-    xf = simulate_force_omni_directions(tmp, dt);   
+    xf = simulate_force_omni_directions(tmp, dt);  
+    xf(:,7:9)=xf(:,7:9)*.5;
     % xf = t(1); x(2:4); dx(5:7); f(8:10); 
     %      xref(11:13); dxref(14:16); ddxref(17:19)
 %     xf = tmp(:,2:7); % xf = [x and xdot]
@@ -108,7 +119,7 @@ if visualization
     ytitles = ["$x$", "$y$", "$\theta$"];
     ytitles = [ytitles, "$\dot{x}$", "$\dot{y}$", "$\dot{\theta}$"];
     ytitles = [ytitles, "$f_x$", "$f_y$", "$f_\theta$"];
-%     for i=1:1
+    %for i=3:3
     for i=1:num_patterns
         % prompt before showing the plots
 %         uiwait(msgbox(num2str(i),'Plotting','modal'));
@@ -155,19 +166,23 @@ xf=[];
 for i = 1:num_patterns
     if patterns{i,2} == 1
         x0 = [x0; patterns{i,1}(1,:)];
-    else
-        xf = [xf; patterns{i,1}(1,:)];
+        xf = [xf; patterns{i,1}(end,:)];
     end
 end
-x0 = mean(x0);
-xf = mean(xf);
+if size(x0,1) > 1
+    x0 = mean(x0);
+end
+if size(xf,1) > 1
+    xf = mean(xf);
+end
+    xf(4:6)=zeros(1,3);
 if exp == ExpConditions.Obstacle
     dlmwrite('config.txt',[x0(1:6); xf(1:6)]);
-end
+end       
 %% fit gaussian proccess model
 f = waitbar(0,'Training the GP models. It would take a while','Name','Training GP Models',...
     'CreateCancelBtn','setappdata(gcbf,''canceling'',1)');
-setappdata(f,'canceling',0);
+% setappdata(f,'canceling',0);
 
 predictor_data = [];
 response_data = [];
@@ -185,10 +200,31 @@ for i = 1:num_patterns
         % responses = [x y theta xdot ydot thetadot f_x f_y f_z pattern_no]
         % force is not a output
         % find next values
-        tmp = [xi(2:end,:); xi(end,:)];
-%         tmp = [xi(6:end,:); xi(end-4:end,:)];
-%         tmp = [xi(3:end,:); xi(end-1:end,:)];
+%       tmp = [xi(2:end,:); xi(end,:)];
+%       tmp = [xi(3:end,:); xi(end-1:end,:)];
+        tmp = [xi(4:end,:); xi(end-2:end,:)];
+%       tmp = [xi(5:end,:); xi(end-3:end,:)];
         response_data = [response_data; tmp];
+
+        % generate points near goal
+        goal = predictor_data(end,:);
+        goal(4:9)=zeros(1,6);
+        r = -.05:.10:.05;
+        [Rx, Ry, Rt] = meshgrid(r,r,r);
+        for l = 0:1
+            for m = 1:length(r)
+                for n = 1:length(r)
+                    for o = 1:length(r)
+                        neighbour = goal;
+                        neighbour(1+l*3) = Rx(m,n,o) + goal(1+l*3);
+                        neighbour(2+l*3) = Ry(m,n,o) + goal(2+l*3);
+                        neighbour(3+l*3) = Rt(m,n,o) + goal(3+l*3);
+                        predictor_data = [predictor_data; neighbour];
+                        response_data = [response_data; goal];
+                    end
+                end
+            end
+        end
     end
 end
 num_Mdls = size(response_data,2);
@@ -202,6 +238,24 @@ for i=1:num_Mdls
 end
 save(file_gprMdls, 'gprMdls');
 delete(f)
+%% Visualising training predictor data
+if visualization
+    close all
+    figure(4)
+    ytitles = ["x", "y", "\theta"];
+    for i=1:3
+        subplot(3,2,2*i-1)
+        plot(predictor_data(:,i));      hold on 
+        plot(response_data(:,i));   
+        ylabel(ytitles(i));
+    end
+    subplot(1,2,2)
+    plot(predictor_data(:,1), predictor_data(:,2),'r-');   hold on
+    plot(response_data(:,1), response_data(:,2),'b.');
+    %xlim([-1.500 2.500]);
+    xlabel('X');
+    ylabel('Y');
+end
 %% 
 % Predict the response corresponding to the rows of |xi| (resubstitution
 % predictions) using the trained model. 
@@ -215,7 +269,7 @@ test_pattern = 1;
 zk=[x0 test_pattern];
 z = [zk];
 zk1 = zk;
-for j = 1:200
+for j = 1:300
     for i=1:num_Mdls
         zk1(i) = predict(gprMdls{i,1}, zk);
     end
@@ -224,7 +278,9 @@ for j = 1:200
 end
 
 if visualization
-    figure(3)
-    plot(z(:,1), z(:,2))
+    figure(1)
+    hold on
+    plot(z(:,1), z(:,2)); hold on
+    plot(response_data(:,1), response_data(:,2),'b.');
     xlim([-2.500 2.500])
 end
