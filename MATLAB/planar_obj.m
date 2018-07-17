@@ -227,14 +227,16 @@ end
 function [des_x, des_f] = desired_human(x,f, pattern)
     xh = [];
     for i=1:size(x,1)
-        xpred = predict(mdlHuman{i,1}, [x' f' pattern]);
+%         xpred = predict(mdlHuman{i,1}, [x' f' pattern]);
+        xpred = predict(mdlHuman{i,1}, [x' f']);
     	xh = [xh xpred];
     end
     des_x = xh';
     
     fh = [];
     for i=7:9
-        fpred = predict(mdlHuman{i,1}, [x' f' pattern]);
+%         fpred = predict(mdlHuman{i,1}, [x' f' pattern]);
+        fpred = predict(mdlHuman{i,1}, [x' f']);
     	fh = [fh fpred];
     end
     des_f = fh';
@@ -245,14 +247,16 @@ end
 function [des_x, des_f] = desired_robot(x, f, pattern)
     xh = [];
     for i=1:size(x,1)
-        xpred = predict(mdlRobot{i,1}, [x' f' pattern]);
+%         xpred = predict(mdlRobot{i,1}, [x' f' pattern]);
+        xpred = predict(mdlRobot{i,1}, [x' f']);
     	xh = [xh xpred];
     end
     des_x = xh';
 
     fh = [];
     for i=7:9
-        fpred = predict(mdlHuman{i,1}, [x' f' pattern]);
+%         fpred = predict(mdlHuman{i,1}, [x' f' pattern]);
+        fpred = predict(mdlHuman{i,1}, [x' f']);
     	fh = [fh fpred];
     end
     des_f = fh';

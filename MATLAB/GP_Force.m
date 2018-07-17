@@ -7,7 +7,7 @@ exp = ExpConditions.Obstacle;
 
 if exp == ExpConditions.Straight
     % raw data from motion capture  
-    file_src = 'chest_striaght_filtered.txt';
+    file_src = 'chest_straight_filtered.txt';
     % start and end of each motion
     file_pattern = 'chest_straight_patterns.txt';
     % output data (GP model)
@@ -23,23 +23,28 @@ if exp == ExpConditions.Obstacle
     file_gprMdls = 'gprMdls_obstacle';  
 end
 x = dlmread(file_src,',',1, 0);
-dt = 0.1;
+dt = 0.2;
 % remove unnecesessary data data 
 a=1;
 b=[1 -1];
 y = filter(b,a,x);
 I = y(:,1)>=1e-3;
 x = x(I,:);
-%dlmwrite('chest_obstacle_filtered.txt',x);
+if exp == ExpConditions.Obstacle
+    %dlmwrite('chest_obstacle_filtered.txt',x);
+end
+if exp == ExpConditions.Straight
+    %dlmwrite('chest_straight_filtered.txt',x);
+end
 % smooth data
 % a=1;
 % b=[1/4 1/4 1/4 1/4];
 % y = filter(b,a,x);
 if exp == ExpConditions.Straight
-    x(:,2) = mean(x(1500:27000,2));
-    x(:,5) = mean(x(1500:27000,5));
-    x(:,8) = mean(x(1500:27000,8));
-    x(:,11) = mean(x(1500:27000,11));
+    x(:,2) = mean(x(1500:24000,2));
+    x(:,5) = mean(x(1500:24000,5));
+    x(:,8) = mean(x(1500:24000,8));
+    x(:,11) = mean(x(1500:24000,11));
 end
 x(:,2:end) = x(:,2:end)*0.001;
 % calculateing object position and angle 
@@ -192,8 +197,8 @@ for i = 1:num_patterns
     pattern_no = patterns{i,2};
     if pattern_no == 1
         xi = patterns{i,1};
-    %     xi = [xi(:,1:3)  ones(size(xi,1),1)*pattern_no];
-        xi = [xi  ones(size(xi,1),1)*pattern_no];
+        % xi = [xi(:,1:3)  ones(size(xi,1),1)*pattern_no];
+        % xi = [xi  ones(size(xi,1),1)*pattern_no];
         predictor_data = [predictor_data; xi];
 
         % responses = [x y theta xdot ydot thetadot pattern_no] at the next time step
@@ -211,7 +216,7 @@ for i = 1:num_patterns
         goal(4:9)=zeros(1,6);
         r = -.05:.10:.05;
         [Rx, Ry, Rt] = meshgrid(r,r,r);
-        for l = 0:1
+        for l = 0:0
             for m = 1:length(r)
                 for n = 1:length(r)
                     for o = 1:length(r)
@@ -265,8 +270,9 @@ for i=1:2
     test_data = [test_data tmp];
 end
 %%
-test_pattern = 1;
-zk=[x0 test_pattern];
+%test_pattern = 1;
+%zk=[x0 test_pattern];
+zk=x0;
 z = [zk];
 zk1 = zk;
 for j = 1:300
