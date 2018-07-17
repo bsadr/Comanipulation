@@ -54,7 +54,7 @@ x=[x(:,1) .5*(x(:,2)+x(:,5)) .5*(x(:,3)+x(:,6)) theta];
 if visualization
     close all
     figure(1)
-    ytitles = ["x", "y", "\theta"];
+    ytitles = ['x', 'y', '\theta'];
     for i=2:4
         subplot(3,2,2*i-3)
         plot(x(:,1), x(:,i));      hold on 
