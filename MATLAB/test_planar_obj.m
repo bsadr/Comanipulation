@@ -1,12 +1,12 @@
 % load gpr models from file
-load('gprMdls_obstacle.mat')
-%load('gprMdls_straight.mat')
+%load('gprMdls_obstacle.mat')
+load('gprMdls_straight.mat')
 mdlHuman = gprMdls;
 load('gprMdls_obstacle.mat')
 mdlRobot = gprMdls;
 %clear('gprMdls');
 
-visualization = false;
+visualization = true;
 
 y = planar_obj(mdlHuman, mdlRobot);
 time_span = y(:,1);

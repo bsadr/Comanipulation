@@ -23,7 +23,7 @@ switch_sequence = t0:dt:tf;
 switch_mode = ones(size(switch_sequence));
 switches = 1/dt*[2, 6];
 for i = switches(1):switches(2)
-    switch_mode(i)=0;
+%    switch_mode(i)=0;
 end
 clear tmp
 %%%%%%%%%%%%% Real Object
@@ -65,6 +65,12 @@ tau = 20;
 prs = ones(1, tau);
 %%%%%%%%%%%%%%%%%%%%%%%%%% Solve for x and h (y=[x(motion);h(generalized force)])
 y = [];
+% persistent variables used in rhs
+t_pre = -1;
+xhd=[];
+fhd=[];
+xrd=[];
+frd=[];
 [t,x]=ode45(@rhs,time_span,x0); 
 [~,idu] = unique(y(1,:));
 unique_y = y(:,idu);
@@ -92,16 +98,20 @@ function xdot=rhs(t,x)
         x(3)=x(3)+pi;
     end    
     pattern = 1;
-    [xhd, fhd] = desired_human(x,f_h_pre, pattern);
-    [xrd, frd] = desired_robot(x,f_h_pre, pattern);
+    dt_ode = t-t_pre
+    if dt_ode>(.5*dt)
+        [xhd, fhd] = desired_human(x,f_h_pre, pattern);
+        [xrd, frd] = desired_robot(x,f_h_pre, pattern);
+    end
+    t_pre = t;
     [f, f_imp, f_ext, f_e, f_r, f_h, f_int, mode] = force_imp(x, xhd, xrd, t);
     sig = .5;
     [pr, fi] = factors(f_e, f_int, f_h, f_r, xhd, x, sig);
-    if ~mode
-        fi(3) = 0;
-        fi(4) = fi(4)*.5;
-        pr = mean(fi);
-    end
+%     if ~mode
+%         fi(3) = 0;
+%         fi(4) = fi(4)*.5;
+%         pr = mean(fi);
+%     end
     D = 1-fi(2);
     P_R = performance(pr);
 %     y = [y, [t; x; f; f_e; f_r; f_h; f_int; P_R; D; mode; pr; fi; f_imp; f_ext; xhd]];
@@ -199,15 +209,11 @@ function [pr, fi] = factors(f_e, f_int, f_h, f_r, x_hat, x, sig)
     elseif fhfr ==0
         f2 = 1;
     else
-        %%%%%%%%%%%%%%%%% check here
-        f2 = (rand)/10;
-    end
-    if f2<.5
-        f2=f2*2;
+        f2 = 0;
     end
     xe = norm(x_hat-x);
     if xe<3*sig
-        f3 = xe/(3*sig);
+        f3 = 1-xe/(3*sig);
     else
         f3 = 0;
     end
