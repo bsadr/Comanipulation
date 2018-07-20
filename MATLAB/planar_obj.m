@@ -4,7 +4,7 @@ function y = planar_obj(mdlHuman, mdlRobot)
 % obj_width = .20;    % width of the object
 % obj_points = [[obj_len/2; 0] [-obj_len/2; 0]]; % human and robot grasp points
 t0 = 0; 
-tf   = 9;  %final time in seconds. 
+tf   = 15;  %final time in seconds. 
 dt = 0.005;
 dt = 0.1;
 time_lines=[t0,tf/2,tf];
@@ -23,7 +23,7 @@ switch_sequence = t0:dt:tf;
 switch_mode = ones(size(switch_sequence));
 switches = 1/dt*[2, 6];
 for i = switches(1):switches(2)
-%    switch_mode(i)=0;
+    switch_mode(i)=0;
 end
 clear tmp
 %%%%%%%%%%%%% Real Object
@@ -98,7 +98,7 @@ function xdot=rhs(t,x)
         x(3)=x(3)+pi;
     end    
     pattern = 1;
-    dt_ode = t-t_pre
+    dt_ode = t-t_pre;
     if dt_ode>(.5*dt)
         [xhd, fhd] = desired_human(x,f_h_pre, pattern);
         [xrd, frd] = desired_robot(x,f_h_pre, pattern);
