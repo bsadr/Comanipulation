@@ -8,7 +8,7 @@ mdlRobot = gprMdls;
 
 visualization = true;
 
-y = planar_obj(mdlHuman, mdlRobot);
+y = planar_obj_trust(mdlHuman, mdlRobot);
 time_span = y(:,1);
 P_R = y(:,23);
 D = y(:,24);
@@ -136,4 +136,15 @@ for i = 1:3
      %plot(y(:,1), y(:,i+1))
      title(plt_titles(i), 'Interpreter', 'latex')
  end
+ %% trust
+ %% xh_d
+ figure(13) 
+ plt_titles = {'trust'};
+ subplot(4, 1, 3)
+ hold on
+ plot(y(:,1), y(:,49),'b.')
+ hold on
+ %plot(y(:,1), y(:,i+1))
+ title(plt_titles, 'Interpreter', 'latex')
+ 
 end

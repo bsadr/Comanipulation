@@ -48,8 +48,11 @@ if exp == ExpConditions.Straight
 end
 x(:,2:end) = x(:,2:end)*0.001;
 % calculateing object position and angle 
-theta = atan2(x(:,3)-x(:,6), x(:,2)-x(:,5));
-x=[x(:,1) .5*(x(:,2)+x(:,5)) .5*(x(:,3)+x(:,6)) theta];
+%theta = atan2(x(:,3)-x(:,6), x(:,2)-x(:,5));
+%x=[x(:,1) .5*(x(:,2)+x(:,5)) .5*(x(:,3)+x(:,6)) theta];
+theta = atan2(x(:,2)-x(:,5), x(:,3)-x(:,6));
+x=[x(:,1) .5*(x(:,3)+x(:,6)) .5*(x(:,2)+x(:,5)) theta];
+
 %% Visualising raw data
 if visualization
     close all
@@ -62,7 +65,8 @@ if visualization
     end
     subplot(1,2,2)
     plot(x(:,2), x(:,3),'r-');   hold on
-    xlim([-1.500 2.500]);
+%     xlim([-1.500 2.500]);
+    ylim([-1.500 2.500]);
     xlabel('X');
     ylabel('Y');
 end
@@ -83,16 +87,22 @@ for i = 1:num_patterns
 
     % transfer outbounds data points in x- directions to the origin
     if pattern_no == 1 || pattern_no == 3
-            J = (tmp(:,2) < tmp(1,2));
-            tmp(J,2) = tmp(2,2);
+%             J = (tmp(:,2) < tmp(1,2));
+%             tmp(J,2) = tmp(2,2);
+            J = (tmp(:,3) < tmp(1,3));
+            tmp(J,3) = tmp(2,3);
     elseif pattern_no ==  2 || pattern_no == 4
-            J = (tmp(:,2) > tmp(1,2));
+%             J = (tmp(:,2) > tmp(1,2));
+            J = (tmp(:,3) > tmp(1,3));
 %            tmp(J,2) = tmp(2,2);
     end
     % add goal points to the end of data
     for j = 1:1
         tmp = [tmp; tmp(end,:)];
-        tmp(end,1:2) = [tmp(end,1)+dt tmp(1,2)];
+
+        tmp(end,1)=tmp(end,1)+dt;
+        tmp(end,3)=tmp(1,3);
+%         tmp(end,1:2) = [tmp(end,1)+dt tmp(1,2)];
     end
             
     % apply kalman filte
@@ -119,13 +129,31 @@ end
 
 %% Visualizating force simulation
 if visualization
+    % add obstacle and human-human to the figure
+    figure(3)
+    ha =gca;
+    haPos = get(ha,'position');
+    [img, map, alphachannel] = imread('coffee table.png');
+    s =size(img)*.001*.2;
+    img_size = [s(2) s(1)];
+    img_corner = [.65,.57].*[haPos(3)-haPos(1), haPos(4)-haPos(2)];
+    img_pos = [haPos(1:2)+img_corner-img_size*.5, img_size];
+    ha2=axes('position',img_pos);
+    image(img)
+%     image(img, 'AlphaData', alphachannel)
+    colormap (map)
+    set(ha2,'handlevisibility','off','visible','off')  
+
     % y = t(1); x(2:4); dx(5:7); f(8:10); 
     % xref(11:13); dxref(14:16); ddxref(17:19)
     ytitles = ["$x$", "$y$", "$\theta$"];
     ytitles = [ytitles, "$\dot{x}$", "$\dot{y}$", "$\dot{\theta}$"];
     ytitles = [ytitles, "$f_x$", "$f_y$", "$f_\theta$"];
     %for i=3:3
-    for i=1:num_patterns
+    idx=[1,3,5,7];
+    for j=1:4%num_patterns
+        i=idx(j);
+%     for i=1:num_patterns      
         % prompt before showing the plots
 %         uiwait(msgbox(num2str(i),'Plotting','modal'));
         y = patterns{i,3};
@@ -153,17 +181,44 @@ if visualization
 
         % plot x-y trajectories
         figure(3)
-   
-        plot(y(:,2), y(:,3))
-        grid on
+    % display \theta on the figure
+    [meshX,meshY] = meshgrid(y(:,2),y(:,3));
+    [~,mesht1] = meshgrid(y(:,2),y(:,4));
+    [~,mesht2] = meshgrid(y(:,3),y(:,4));
+    u = cos(mesht1);
+    v = sin(mesht1);
+    mask = zeros(size(meshX))==ones(size(meshX));
+    l=[1,25:5:(size(mask,2)-5)];
+    for k=1:size(l,2)%num_patterns
+        mask(l(k),l(k))=true;
+    end
+    quiver(meshX(mask),meshY(mask),u(mask),v(mask), 'AutoScaleFactor',.12, ...
+        'Marker', '.', 'MarkerSize', 6)
+    hold on
+    
+        ax = gca;
+        ax.ColorOrderIndex = j;
+        axis equal
+%         axis tight
+        plot(y(:,2), y(:,3))                        
+        grid off
+        box on
         hold on
-        plot(y(:,11), y(:,12), 'b--')
-        xlim([-2.500 2.500]);
+%          plot(y(:,11), y(:,12), 'b--')
+%         xlim([-2.500 2.500]);
+        ylim([-1 1]);
+        xlim([-1 5]);
+%         xlim([-3 3]);
+
         xlabel('X');
         ylabel('Y');
-        legend({'simulation', 'reference'}, 'Location','southoutside')
+        %legend({'simulation', 'reference'}, 'Location','southeast')
     end
 end
+figure1.PaperUnits = 'inches';
+figure1.PaperPosition = [0 0 6 6];
+print('training_motion','-depsc','-r0')
+print('training_motion','-dpdf','-r0')
 
 %% find x0 and xf
 x0=[];

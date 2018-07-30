@@ -13,7 +13,6 @@ CT1 = 0.01;
 st = 400; % number of samples in belief distribution
 bel_step = 1/st; % belief distribution step
 t_v = 0:bel_step:1; % trust t(k) vector
-t1_v = (0:bel_step:1)'; % trust t(k-1) vector
 bel_size = size(t_v,2); % sizr_trust is the size of t
 t = 1 - (0:bel_step:1);% trust t(k) matrix
 t1 = 1- (0:bel_step:1)';% trust t(k) matrix
@@ -23,10 +22,8 @@ bel_f = ones(1,bel_size);
 P= zeros(bel_size,bel_size,size_time);
 % O_f: p(T(k), D(k))
 O_f= zeros(bel_size,bel_size,size_time);
-bel_bar= zeros(bel_size,bel_size,size_time);
 sigma_t = 0.005;    % standard deviation for trust model
 sigma_f = 0.1;      % standard deviation for trust observation
-integ = 1:1:10000;
 
 bel_f_max = zeros(1,size_time);
 bel_f_max(1)=1;
@@ -41,8 +38,6 @@ for k = 2:1:size_time
         % O_f: p(T(k), D(k))
         O_f(:,:,k) = normpdf(D(k), tt, sigma_f);
         O_f(:,:,k)= bel_step*O_f(:,:,k);
-        % bel_bar
-        bel_bar(:,:,k) = O_f(:,:,k).* P(:,:,k) .* (ones(bel_size,1)*bel_f(k-1,:));
         % bel_f
         logprobs_mat_prior = repmat(log(bel_f(k-1,:)), bel_size, 1);
         logprobs_mat_propagate = log(P(:,:,k));
@@ -54,21 +49,12 @@ for k = 2:1:size_time
         norm_posterior = norm_posterior / bel_size;
         x_latest_pmf = probs_posterior ./ norm_posterior;
         bel_f(k,:) = x_latest_pmf;
-
+        % mu value of bel_f
         [~,Im] = max(x_latest_pmf);
         bel_f_max(k) = (Im-1)*bel_step;
     end
 end
-
-bel = bel_f';
-[trust_most,trust_most1] = max(bel);
-trust_most1 = trust_most1(1,1:size_time)/(st+1);
 %% Plot Trust
-a = k;
-
-az = 0;
-el = 90;
-
 figure1 = figure;
 subplot(4,1,1)
 plot(time_span,PR(1,1:size_time),'k','LineWidth',1)
@@ -89,6 +75,7 @@ ylabel('bel_f','FontSize',18)
 set(gca,'FontSize',18)
 
 subplot(4,1,3)
+hold on
 plot(time_span,bel_f_max(1,1:size_time),'k','LineWidth',1) 
 hold on 
 %plot(time_span,trust_most1(1,1:size_time),'b--','LineWidth',.5) 
@@ -100,7 +87,7 @@ set(gca,'FontSize',18)
 
 
 subplot(4,1,4)
-plot(time_span,D(1:size_time));
+plot(time_span,D(1:size_time),'k','LineWidth',1);
 xlabel('t','FontSize',18)
 ylabel('D','FontSize',18)
 grid on
