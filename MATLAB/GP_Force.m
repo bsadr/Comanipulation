@@ -2,8 +2,8 @@
 clear all
 visualization = true;
 % visualization = false;
-%exp = ExpConditions.Straight;
-exp = ExpConditions.Obstacle;
+exp = ExpConditions.Straight;
+% exp = ExpConditions.Obstacle;
 
 if exp == ExpConditions.Straight
     % raw data from motion capture  
@@ -150,37 +150,45 @@ if visualization
     ytitles = [ytitles, "$\dot{x}$", "$\dot{y}$", "$\dot{\theta}$"];
     ytitles = [ytitles, "$f_x$", "$f_y$", "$f_\theta$"];
     %for i=3:3
+    %%
     idx=[1,3,5,7];
-    for j=1:4%num_patterns
+    for j=1:1%num_patterns
         i=idx(j);
 %     for i=1:num_patterns      
         % prompt before showing the plots
 %         uiwait(msgbox(num2str(i),'Plotting','modal'));
         y = patterns{i,3};
 %         close all
-        figure(2)
+        figure2=figure(2);
         % plot x and dx
         for i=2:7
             % simulation
             subplot(3,3,i-1)
-            plot(y(:,1), y(:,i))
+            plot(y(:,1), y(:,i), 'b-')
             ylabel(ytitles(i-1), 'interpreter', 'latex');
             grid on
             hold on
             % desired
-            plot(y(:,1), y(:,i+9), 'b--')
+            plot(y(:,1), y(:,i+9), 'r-.')
+            xlim([0 15])
         end
         % plot f
         for i=8:10
             subplot(3,3,i-1)
-            plot(y(:,1), y(:,i))
+            plot(y(:,1), y(:,i), 'b-')
             ylabel(ytitles(i-1), 'interpreter', 'latex');
             grid on
             hold on
+            xlim([0 15])
         end
-
+        figure2.PaperUnits = 'inches';
+        figure2.PaperPosition = [0 0 9 6];
+%         print('training_controller','-depsc','-r0')
+%         print('training_controller','-dpdf','-r0')
+      
+        %%
         % plot x-y trajectories
-        figure(3)
+        figure3=figure(3);
     % display \theta on the figure
     [meshX,meshY] = meshgrid(y(:,2),y(:,3));
     [~,mesht1] = meshgrid(y(:,2),y(:,4));
@@ -196,29 +204,50 @@ if visualization
         'Marker', '.', 'MarkerSize', 6)
     hold on
     
+ %%%theta original
+     % display \theta on the figure
+    [meshX,meshY] = meshgrid(y(:,11),y(:,12));
+    [~,mesht1] = meshgrid(y(:,11),y(:,13));
+    [~,mesht2] = meshgrid(y(:,12),y(:,13));
+    u = cos(mesht1);
+    v = sin(mesht1);
+    mask = zeros(size(meshX))==ones(size(meshX));
+    l=[1,25:5:(size(mask,2)-5)];
+    for k=1:size(l,2)%num_patterns
+        mask(l(k),l(k))=true;
+    end
+    quiver(meshX(mask),meshY(mask),u(mask),v(mask), 'AutoScaleFactor',.12, ...
+        'Marker', '.', 'MarkerSize', 6)
+    hold on
+%%%%    
+    
         ax = gca;
         ax.ColorOrderIndex = j;
         axis equal
 %         axis tight
-        plot(y(:,2), y(:,3))                        
+        plot(y(:,2), y(:,3), 'b-')                        
         grid off
         box on
         hold on
-%          plot(y(:,11), y(:,12), 'b--')
+         plot(y(:,11), y(:,12), 'r-.')
 %         xlim([-2.500 2.500]);
         ylim([-1 1]);
         xlim([-1 5]);
 %         xlim([-3 3]);
 
-        xlabel('X');
-        ylabel('Y');
+        xlabel('$x$', 'interpreter', 'latex');
+        ylabel('$y$', 'interpreter', 'latex');
         %legend({'simulation', 'reference'}, 'Location','southeast')
     end
 end
-figure1.PaperUnits = 'inches';
-figure1.PaperPosition = [0 0 6 6];
-print('training_motion','-depsc','-r0')
-print('training_motion','-dpdf','-r0')
+%figure3.PaperUnits = 'inches';
+% figure3.PaperSize = [6 2];
+%figure3.PaperPosition = [0 0 6 2];
+% print('training_motion','-depsc','-r0')
+% print('training_motion','-dpdf','-r0')
+
+% print('sample_motion','-depsc','-r0')
+% print('sample_motion','-dpdf','-r0')
 
 %% find x0 and xf
 x0=[];
@@ -313,8 +342,8 @@ if visualization
     plot(predictor_data(:,1), predictor_data(:,2),'r-');   hold on
     plot(response_data(:,1), response_data(:,2),'b.');
     %xlim([-1.500 2.500]);
-    xlabel('X');
-    ylabel('Y');
+    xlabel('$x$', 'interpreter', 'latex');
+    ylabel('$y$', 'interpreter', 'latex');
 end
 %% 
 % Predict the response corresponding to the rows of |xi| (resubstitution
