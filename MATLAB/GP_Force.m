@@ -1,7 +1,7 @@
 %% Reading data
 clear all
 visualization = true;
-% visualization = false;
+visualization = false;
 exp = ExpConditions.Straight;
 % exp = ExpConditions.Obstacle;
 
